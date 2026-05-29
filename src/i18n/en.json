@@ -1,0 +1,123 @@
+{
+  "app": {
+    "title": "CodaScore",
+    "subtitle": "Score Generation Tool"
+  },
+  "tool": {
+    "lilypondScore": {
+      "name": "Score Workbench",
+      "description": "Generate professional scores via natural language or LilyPond code"
+    }
+  },
+  "common": {
+    "clear": "Clear",
+    "undo": "Undo",
+    "generate": "Generate",
+    "apply": "Apply",
+    "copy": "Copy",
+    "copied": "Copied",
+    "notes": "Notes",
+    "loading": "Loading...",
+    "all": "All",
+    "error": "An error occurred"
+  },
+  "templateCategory": {
+    "basic": "Basic",
+    "piano": "Piano",
+    "chamber": "Chamber",
+    "vocal": "Vocal",
+    "contemporary": "Contemporary",
+    "analysis": "Analysis"
+  },
+  "lilypond": {
+    "name": "Score Workbench",
+    "placeholder": "Under construction…",
+    "ai": {
+      "title": "AI Generate",
+      "inputPlaceholder": "Describe the score you want in natural language…",
+      "generate": "Generate",
+      "generating": "Generating…",
+      "offline": "Offline — AI features unavailable",
+      "offlineError": "An internet connection is required for AI generation.",
+      "generateFailed": "AI generation failed.",
+      "template": "Template",
+      "selectTemplate": "Select template",
+      "knowledgeInjected": "{{count}} composition rules injected",
+      "contextLoadFailed": "Knowledge base failed to load, AI generation quality may be affected"
+    },
+    "editor": {
+      "title": "LilyPond Code",
+      "clear": "Clear",
+      "copy": "Copy code",
+      "copied": "Copied"
+    },
+    "preview": {
+      "title": "Score Preview",
+      "compile": "Compile Preview",
+      "compiling": "Compiling…",
+      "noPreview": "Click 'Compile Preview' to render the score",
+      "error": "Compilation failed"
+    },
+    "export": {
+      "title": "Export",
+      "pdf": "Export PDF",
+      "png": "Export PNG",
+      "svg": "Export SVG",
+      "midi": "Export MIDI",
+      "compileFailed": "Compilation failed, please fix errors in the code first"
+    },
+    "status": {
+      "idle": "Idle",
+      "compiling": "Compiling…",
+      "success": "Compilation successful",
+      "failed": "Compilation failed",
+      "version": "LilyPond {{version}}",
+      "duration": "{{ms}}ms",
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "errors": {
+      "notInstalled": "LilyPond not found, please install first",
+      "timeout": "Compilation timed out (30s)",
+      "aiFailed": "AI generation failed",
+      "exportFailed": "Export failed"
+    },
+    "review": {
+      "title": "Review Suggestions ({{count}})"
+    },
+    "templates": {
+      "blank": "Blank Score",
+      "soloMelody": "Solo Melody",
+      "soloBass": "Solo Bass",
+      "pianoSolo": "Piano Solo",
+      "pianoVoice": "Voice + Piano",
+      "stringQuartet": "String Quartet",
+      "duet": "Duet",
+      "woodwindTrio": "Woodwind Trio",
+      "brassQuintet": "Brass Quintet",
+      "satbChoir": "SATB Choir",
+      "satbPiano": "SATB + Piano",
+      "twelveTone": "Twelve-Tone Row",
+      "twelveToneMatrix": "Matrix Score",
+      "microtonal": "Microtonal Notation",
+      "cluster": "Cluster",
+      "proportional": "Proportional Notation",
+      "graphic": "Graphic Notation",
+      "pitchClassChord": "Chord Output",
+      "chordProgression": "Chord Progression",
+      "polymeter": "Polymeter"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "apiKey": "API Key",
+    "baseUrl": "API Base URL",
+    "model": "Model",
+    "save": "Save",
+    "saved": "Configuration saved",
+    "testConnection": "Test Connection",
+    "envNotice": "API key is set via environment variable. Saving here will override it with a config file.",
+    "fromEnv": "from env var",
+    "presets": "Quick presets"
+  }
+}

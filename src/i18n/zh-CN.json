@@ -1,0 +1,123 @@
+{
+  "app": {
+    "title": "CodaScore",
+    "subtitle": "乐谱生成工具"
+  },
+  "tool": {
+    "lilypondScore": {
+      "name": "乐谱工作台",
+      "description": "通过自然语言或LilyPond代码生成专业乐谱"
+    }
+  },
+  "common": {
+    "clear": "清除",
+    "undo": "撤销",
+    "generate": "生成",
+    "apply": "应用",
+    "copy": "复制",
+    "copied": "已复制",
+    "notes": "音符",
+    "loading": "加载中...",
+    "all": "全部",
+    "error": "发生错误"
+  },
+  "templateCategory": {
+    "basic": "基础",
+    "piano": "钢琴",
+    "chamber": "室内乐",
+    "vocal": "声乐",
+    "contemporary": "现代/当代",
+    "analysis": "分析/教学"
+  },
+  "lilypond": {
+    "name": "乐谱工作台",
+    "placeholder": "开发中…",
+    "ai": {
+      "title": "AI 生成",
+      "inputPlaceholder": "用自然语言描述你想要的乐谱…",
+      "generate": "生成",
+      "generating": "生成中…",
+      "offline": "离线模式 — AI 功能不可用",
+      "offlineError": "需要网络连接才能使用 AI 生成。",
+      "generateFailed": "AI 生成失败。",
+      "template": "模板",
+      "selectTemplate": "选择模板",
+      "knowledgeInjected": "已注入 {{count}} 条作曲知识",
+      "contextLoadFailed": "知识库加载失败，AI 生成质量可能受影响"
+    },
+    "editor": {
+      "title": "LilyPond 代码",
+      "clear": "清空",
+      "copy": "复制代码",
+      "copied": "已复制"
+    },
+    "preview": {
+      "title": "乐谱预览",
+      "compile": "编译预览",
+      "compiling": "编译中…",
+      "noPreview": "点击「编译预览」生成乐谱",
+      "error": "编译失败"
+    },
+    "export": {
+      "title": "导出",
+      "pdf": "导出 PDF",
+      "png": "导出 PNG",
+      "svg": "导出 SVG",
+      "midi": "导出 MIDI",
+      "compileFailed": "编译失败，请先修复代码中的错误"
+    },
+    "status": {
+      "idle": "空闲",
+      "compiling": "编译中…",
+      "success": "编译成功",
+      "failed": "编译失败",
+      "version": "LilyPond {{version}}",
+      "duration": "耗时 {{ms}}ms",
+      "online": "在线",
+      "offline": "离线"
+    },
+    "errors": {
+      "notInstalled": "未检测到 LilyPond，请先安装",
+      "timeout": "编译超时（30秒）",
+      "aiFailed": "AI 生成失败",
+      "exportFailed": "导出失败"
+    },
+    "review": {
+      "title": "审查建议 ({{count}})"
+    },
+    "templates": {
+      "blank": "空白乐谱",
+      "soloMelody": "独奏旋律",
+      "soloBass": "低音独奏",
+      "pianoSolo": "钢琴独奏",
+      "pianoVoice": "独唱+钢琴",
+      "stringQuartet": "弦乐四重奏",
+      "duet": "二重奏",
+      "woodwindTrio": "木管三重奏",
+      "brassQuintet": "铜管五重奏",
+      "satbChoir": "SATB 合唱",
+      "satbPiano": "SATB+钢琴",
+      "twelveTone": "十二音序列",
+      "twelveToneMatrix": "矩阵总谱",
+      "microtonal": "微音程记谱",
+      "cluster": "音簇",
+      "proportional": "比例记谱",
+      "graphic": "图形记谱",
+      "pitchClassChord": "和弦输出",
+      "chordProgression": "和弦进行",
+      "polymeter": "多节拍"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "apiKey": "API 密钥",
+    "baseUrl": "API 地址",
+    "model": "模型名称",
+    "save": "保存",
+    "saved": "配置已保存",
+    "testConnection": "测试连接",
+    "envNotice": "当前 API 密钥来自环境变量，无法在此修改。修改后保存将覆盖环境变量配置。",
+    "fromEnv": "来自环境变量",
+    "presets": "快速选择服务商"
+  }
+}
