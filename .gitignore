@@ -1,40 +1,33 @@
-# Dependencies
-node_modules/
+# Data (large files)
+data/raw/
+data/processed/
 
-# Build output
-dist/
-src-tauri/target/
+# Model weights
+weights/
 
-# TypeScript build info
-*.tsbuildinfo
-tsconfig.tsbuildinfo
+# Outputs
+outputs/
 
-# OS files
-.DS_Store
-Thumbs.db
-desktop.ini
+# Reference images for img2img
+references/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
-# Environment
-.env
-.env.local
-.env.*.local
+# OS
+.DS_Store
+Thumbs.db
 
-# Tauri build artifacts
-# Cargo.lock is committed for reproducible builds (binary application)
+# Jupyter
+.ipynb_checkpoints/
 
-# Logs
-*.log
-npm-debug.log*
-
-# Large reference docs (available separately)
-# lilypond-complete-reference.md
-# Study materials (textbooks, OCR output)
-study/pdfs/
-study/ocr-output/
+# uv
+uv.lock
