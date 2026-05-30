@@ -1,0 +1,53 @@
+# LoRA training config for Boulez piano works
+# Phase 0: Concept validation on RTX 5060 8GB at 512x512
+# Phase 1 (RTX 5080 16GB): switch resolution to 768 or 1024
+
+model:
+  base: "stabilityai/stable-diffusion-xl-base-1.0"
+  variant: "fp16"
+
+lora:
+  rank: 32          # 16-64, scores have simple texture
+  alpha: 16         # typically half of rank
+  dropout: 0.05
+  target_modules:
+    - "to_k"
+    - "to_q"
+    - "to_v"
+    - "to_out.0"
+
+training:
+  # RTX 5060 8GB -> 512; RTX 5080 16GB -> 768 or 1024
+  resolution: 512
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  lr_scheduler: "constant_with_warmup"
+  lr_warmup_steps: 100
+  max_steps: 2000
+  mixed_precision: "fp16"
+  optimizer: "adamw_8bit"    # bitsandbytes 8-bit AdamW
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+  seed: 42
+
+data:
+  train_dir: "data/processed/boulez/"
+  metadata_file: "data/metadata/annotations/boulez.json"
+  trigger_word: "in the style of Boulez"
+
+output:
+  dir: "weights/lora/"
+  name: "coda-score-boulez"
+  save_every_n_steps: 500
+
+validation:
+  enabled: true
+  every_n_steps: 500
+  resolution: 512
+  steps: 30
+  cfg: 7.0
+  prompts:
+    - "contemporary classical music score, in the style of Boulez, for piano, serial composition, black ink on white paper"
+    - "modern avant-garde piano score, in the style of Boulez, dense atonal notation, complex rhythms"
+    - "contemporary classical music score, black ink on white paper, traditional engraving"
