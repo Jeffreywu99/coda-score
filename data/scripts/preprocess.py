@@ -14,10 +14,10 @@ from utils.image import deskew, adaptive_threshold, normalize_score_image
 @click.argument("input_dir", type=click.Path(exists=True, path_type=Path))
 @click.argument("output_dir", type=click.Path(path_type=Path))
 @click.option("--size", default=1024, help="Target square size in pixels")
-@click.option("--deskew/--no-deskew", default=True, help="Correct scan rotation")
-@click.option("--threshold/--no-threshold", default=False, help="Apply adaptive threshold (removes color)")
-@click.option("--grayscale/--color", default=False, help="Convert to grayscale")
-def main(input_dir: Path, output_dir: Path, size: int, deskew: bool, threshold: bool, grayscale: bool):
+@click.option("--do-deskew/--no-deskew", default=True, help="Correct scan rotation")
+@click.option("--do-threshold/--no-threshold", default=False, help="Apply adaptive threshold (removes color)")
+@click.option("--do-grayscale/--no-grayscale", default=False, help="Convert to grayscale")
+def main(input_dir: Path, output_dir: Path, size: int, do_deskew: bool, do_threshold: bool, do_grayscale: bool):
     """Preprocess score images for LoRA training.
 
     Reads PNGs from INPUT_DIR, applies preprocessing, saves to OUTPUT_DIR.
@@ -30,7 +30,7 @@ def main(input_dir: Path, output_dir: Path, size: int, deskew: bool, threshold: 
         return
 
     print(f"Processing {len(image_files)} images -> {size}x{size}")
-    print(f"  Deskew: {deskew} | Threshold: {threshold} | Grayscale: {grayscale}")
+    print(f"  Deskew: {do_deskew} | Threshold: {do_threshold} | Grayscale: {do_grayscale}")
 
     success = 0
     for img_path in image_files:
@@ -39,11 +39,11 @@ def main(input_dir: Path, output_dir: Path, size: int, deskew: bool, threshold: 
             print(f"  SKIP {img_path.name}: cannot read")
             continue
 
-        if deskew:
+        if do_deskew:
             image = deskew(image)
-        if threshold:
+        if do_threshold:
             image = adaptive_threshold(image)
-        if grayscale:
+        if do_grayscale:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         image = normalize_score_image(image, target_size=(size, size))

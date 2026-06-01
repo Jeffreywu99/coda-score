@@ -43,10 +43,10 @@ def load_models(base_model: str, variant: str = "fp16"):
     noise_scheduler = DDPMScheduler.from_pretrained(base_model, subfolder="scheduler")
     tokenizer_one = AutoTokenizer.from_pretrained(base_model, subfolder="tokenizer", use_fast=False)
     tokenizer_two = AutoTokenizer.from_pretrained(base_model, subfolder="tokenizer_2", use_fast=False)
-    text_encoder_one = CLIPTextModel.from_pretrained(base_model, subfolder="text_encoder", torch_dtype=dtype)
-    text_encoder_two = CLIPTextModelWithProjection.from_pretrained(base_model, subfolder="text_encoder_2", torch_dtype=dtype)
-    vae = AutoencoderKL.from_pretrained(base_model, subfolder="vae", torch_dtype=dtype)
-    unet = UNet2DConditionModel.from_pretrained(base_model, subfolder="unet", torch_dtype=dtype)
+    text_encoder_one = CLIPTextModel.from_pretrained(base_model, subfolder="text_encoder", torch_dtype=dtype, variant=variant)
+    text_encoder_two = CLIPTextModelWithProjection.from_pretrained(base_model, subfolder="text_encoder_2", torch_dtype=dtype, variant=variant)
+    vae = AutoencoderKL.from_pretrained(base_model, subfolder="vae", torch_dtype=dtype, variant=variant)
+    unet = UNet2DConditionModel.from_pretrained(base_model, subfolder="unet", torch_dtype=dtype, variant=variant)
 
     for model in [vae, text_encoder_one, text_encoder_two, unet]:
         model.requires_grad_(False)
@@ -55,19 +55,34 @@ def load_models(base_model: str, variant: str = "fp16"):
 
 
 def encode_prompt_sdxl(tokenizers, text_encoders, prompt: str, device: torch.device):
-    """Encode a prompt through both SDXL text encoders and concatenate."""
-    embeds = []
-    pooled = None
-    for tokenizer, encoder in zip(tokenizers, text_encoders):
-        inputs = tokenizer(prompt, padding="max_length", max_length=tokenizer.model_max_length,
-                           truncation=True, return_tensors="pt")
-        input_ids = inputs.input_ids.to(device)
+    """Encode a prompt through both SDXL text encoders and concatenate.
+
+    SDXL uses two text encoders:
+      - CLIPTextModel (ViT-L): hidden_states[-2] for prompt embeds
+      - CLIPTextModelWithProjection (ViT-G): hidden_states[-2] for prompt embeds,
+        text_embeds for pooled output (used as add_time_ids conditioning)
+    """
+    prompt_embeds_list = []
+    pooled_prompt_embeds = None
+
+    for tokenizer, text_encoder in zip(tokenizers, text_encoders):
+        text_inputs = tokenizer(
+            prompt, padding="max_length", max_length=tokenizer.model_max_length,
+            truncation=True, return_tensors="pt",
+        )
+        input_ids = text_inputs.input_ids.to(device)
         with torch.no_grad():
-            outputs = encoder(input_ids, output_hidden_states=True)
-        embeds.append(outputs.hidden_states[-2])
-        if pooled is None:
-            pooled = outputs[0]
-    return torch.cat(embeds, dim=-1), pooled
+            outputs = text_encoder(input_ids, output_hidden_states=True)
+
+        # Penultimate hidden states from each encoder get concatenated
+        prompt_embeds_list.append(outputs.hidden_states[-2])
+
+        # Pooled embeds come from CLIPTextModelWithProjection (second encoder)
+        if hasattr(outputs, "text_embeds"):
+            pooled_prompt_embeds = outputs.text_embeds
+
+    prompt_embeds = torch.cat(prompt_embeds_list, dim=-1)
+    return prompt_embeds, pooled_prompt_embeds
 
 
 def compute_sdxl_add_time_ids(resolution: int, device: torch.device, dtype: torch.dtype):
@@ -80,10 +95,12 @@ def compute_sdxl_add_time_ids(resolution: int, device: torch.device, dtype: torc
 
 
 def save_lora_weights(unet, path: Path):
-    """Save LoRA weights as safetensors."""
+    """Save LoRA weights as safetensors with 'unet.' prefix for diffusers."""
     path.parent.mkdir(parents=True, exist_ok=True)
     state_dict = get_peft_model_state_dict(unet)
-    save_file(state_dict, str(path))
+    # Add 'unet.' prefix so diffusers' load_lora_weights can find the keys
+    prefixed = {f"unet.{k}": v for k, v in state_dict.items()}
+    save_file(prefixed, str(path))
     logger.info(f"Saved LoRA weights -> {path}")
 
 
@@ -95,17 +112,18 @@ def generate_validation(unet, vae, text_encoders, tokenizers, noise_scheduler,
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    pipe = StableDiffusionXLPipeline.from_pretrained(
-        "stabilityai/stable-diffusion-xl-base-1.0",
-        unet=unet,
+    pipe = StableDiffusionXLPipeline(
         vae=vae,
         text_encoder=text_encoders[0],
         text_encoder_2=text_encoders[1],
         tokenizer=tokenizers[0],
         tokenizer_2=tokenizers[1],
-        torch_dtype=dtype,
+        unet=unet,
+        scheduler=noise_scheduler,
+        force_zeros_for_empty_prompt=True,
     )
-    pipe.enable_model_cpu_offload()
+    # Validation runs full fp32 — safe for VAE, fits 16GB at 1024²
+    pipe.to(device=device, dtype=torch.float32)
     generator = torch.Generator(device=device).manual_seed(seed)
 
     for i, prompt in enumerate(prompts):
@@ -120,7 +138,8 @@ def generate_validation(unet, vae, text_encoders, tokenizers, noise_scheduler,
 
 @click.command()
 @click.option("--config", required=True, type=click.Path(exists=True), help="YAML config file")
-def main(config: str):
+@click.option("--resume", default=None, type=click.Path(exists=True), help="Resume from checkpoint .safetensors")
+def main(config: str, resume: str | None):
     """Train a LoRA adapter on SDXL for music score style transfer."""
     with open(config) as f:
         cfg = yaml.safe_load(f)
@@ -134,17 +153,30 @@ def main(config: str):
         gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
     )
 
+    # Parse resume step from checkpoint filename
+    resume_step = 0
+    if resume:
+        import re
+        match = re.search(r"checkpoint-(\d+)", str(resume))
+        if match:
+            resume_step = int(match.group(1))
+            logger.info(f"Resuming from step {resume_step}")
+
     logger.info(f"=== coda-score LoRA Training ===")
     logger.info(f"Base model: {model_cfg['base']}")
     logger.info(f"LoRA rank: {lora_cfg['rank']}, alpha: {lora_cfg['alpha']}")
     logger.info(f"Resolution: {resolution}x{resolution}")
     logger.info(f"Max steps: {train_cfg['max_steps']}")
+    if resume_step:
+        logger.info(f"Resume from step: {resume_step}")
     logger.info(f"Learning rate: {train_cfg['learning_rate']}")
     logger.info(f"Optimizer: {train_cfg['optimizer']}")
 
     if train_cfg.get("seed"):
         set_seed(train_cfg["seed"])
 
+    # Model weights are always fp16 (SDXL doesn't publish bf16 weights)
+    # mixed_precision in config controls training autocast, not weight dtype
     logger.info("Loading SDXL models...")
     noise_scheduler, tokenizers, text_encoders, vae, unet = load_models(
         model_cfg["base"], model_cfg.get("variant", "fp16")
@@ -157,6 +189,17 @@ def main(config: str):
         lora_dropout=lora_cfg.get("dropout", 0.05),
     )
     unet.add_adapter(lora_config)
+
+    # Load checkpoint weights if resuming
+    if resume:
+        from safetensors.torch import load_file
+        from peft.utils import set_peft_model_state_dict
+        state_dict = load_file(resume)
+        missing, unexpected = set_peft_model_state_dict(unet, state_dict)
+        if missing:
+            logger.warning(f"Missing keys when loading checkpoint: {len(missing)}")
+        logger.info(f"Loaded LoRA weights from {resume}")
+
     cast_training_params(unet, dtype=torch.float32)
 
     if train_cfg.get("gradient_checkpointing"):
@@ -198,7 +241,21 @@ def main(config: str):
 
     unet, optimizer, dataloader, lr_scheduler = accelerator.prepare(unet, optimizer, dataloader, lr_scheduler)
 
-    weight_dtype = torch.float16 if train_cfg["mixed_precision"] == "fp16" else torch.float32
+    # Fast-forward scheduler and dataloader if resuming
+    if resume_step > 0:
+        for _ in range(resume_step):
+            lr_scheduler.step()
+        # Fast-forward dataloader to get a different shuffle state
+        data_iter = iter(dataloader)
+        for _ in range(resume_step % len(dataloader)):
+            try:
+                next(data_iter)
+            except StopIteration:
+                data_iter = iter(dataloader)
+                next(data_iter)
+
+    mp = train_cfg["mixed_precision"]
+    weight_dtype = torch.bfloat16 if mp == "bf16" else (torch.float16 if mp == "fp16" else torch.float32)
     vae.to(accelerator.device, dtype=weight_dtype)
     text_encoders[0].to(accelerator.device, dtype=weight_dtype)
     text_encoders[1].to(accelerator.device, dtype=weight_dtype)
@@ -206,11 +263,12 @@ def main(config: str):
     add_time_ids = compute_sdxl_add_time_ids(resolution, accelerator.device, weight_dtype)
 
     logger.info("Starting training...")
-    global_step = 0
+    global_step = resume_step
     output_dir = Path(output_cfg["dir"]) / output_cfg["name"]
     data_iter = iter(dataloader)
 
-    progress_bar = tqdm(range(train_cfg["max_steps"]), disable=not accelerator.is_main_process, desc="Training")
+    progress_bar = tqdm(range(train_cfg["max_steps"]), disable=not accelerator.is_main_process, desc="Training",
+                        initial=resume_step)
 
     while global_step < train_cfg["max_steps"]:
         try:
@@ -264,6 +322,9 @@ def main(config: str):
                         val_cfg.get("steps", 30), val_cfg.get("cfg", 7.0), train_cfg.get("seed", 42),
                         output_dir / f"val-{global_step}", accelerator.device, weight_dtype,
                     )
+                    # Restore VAE to training dtype (validation changed it to fp32)
+                    vae.to(accelerator.device, dtype=weight_dtype)
+                    torch.cuda.empty_cache()
 
     final_path = output_dir / f"{output_cfg['name']}.safetensors"
     save_lora_weights(accelerator.unwrap_model(unet), final_path)
