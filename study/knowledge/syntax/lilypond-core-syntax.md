@@ -451,3 +451,91 @@ c4^\markup { \bold "forte" }     % 粗体文本
 c4^\markup { \italic "dolce" }   % 斜体文本
 c4^\markup { "espr." }           % 普通文本
 ```
+
+---
+
+## 十三、现代音乐专用记谱法 (Contemporary Music Notation)
+
+本章节包含了针对现代主义图形谱、无调性音乐和时空按比例排版的特殊语法，是 Coda-Score 项目生成图像骨架的核心依赖。
+
+### 13.1 音簇记谱 (Clusters)
+现代音乐中常使用连续的黑块来表示密集音簇。LilyPond 原生提供 `\makeClusters` 命令。
+
+```lilypond
+\relative c' {
+  % 将普通的和弦或音符转化为连续的音簇黑块
+  \makeClusters {
+    <g' b>2 <c g'>
+    <g c>4 <c e> <e c> <c g>
+  }
+}
+```
+**注意**：音簇的高度由给定的最高音和最低音决定，中间会自动填充为黑色块。
+
+### 13.2 比例记谱法 (Proportional Notation)
+为了让空间（X轴）严格对应时间（时值），而不是按照传统美学自动挤压，必须启用严格的比例记谱。这对于现代图解乐谱至关重要。
+
+```lilypond
+\score {
+  \new Staff {
+    \relative c' {
+      c4 d8 e16 f r4 g
+    }
+  }
+  \layout {
+    \context {
+      \Score
+      % 设定 1/16 音符作为基础的空间单位，空间分配完全按时值线性拉伸
+      proportionalNotationDuration = #1/16
+      
+      % 强制开启严格模式，禁止由于跨行导致的任何挤压和松散
+      \override SpacingSpanner.strict-note-spacing = ##t
+      \override SpacingSpanner.strict-grace-spacing = ##t
+    }
+  }
+}
+```
+
+### 13.3 隐藏传统排版元素 (Hidden Barlines / Staves)
+当不需要小节线甚至不需要五线谱本身时，可以通过 `\omit` 移除元素。
+
+```lilypond
+\score {
+  \new Staff {
+    c4 d e f
+  }
+  \layout {
+    \context {
+      \Staff
+      % 彻底隐藏小节线
+      \omit BarLine
+      % 彻底隐藏拍号
+      \omit TimeSignature
+      % 彻底隐藏五线谱线（只保留音符，适合极简或纯图形呈现）
+      % \omit StaffSymbol 
+    }
+  }
+}
+```
+
+### 13.4 自定义矢量图形 (Graphic PostScript/SVG Path)
+你可以通过 `\markup` 结合 `\path` 在乐谱任意位置注入矢量线条，用来表示滑音、随机游走或其他非标准扩展技法。
+
+```lilypond
+\relative c'' {
+  % 在音符上方画一条自定义的折线
+  c4^\markup {
+    \path #0.25 #'((moveto 0 0)
+                   (lineto 2 3)
+                   (lineto 4 -1)
+                   (lineto 6 2))
+  }
+  
+  % 画一个实心多边形
+  d4_\markup {
+    \with-color #black
+    \polygon #'((0 . 0) (2 . 2) (4 . 0) (2 . -2))
+  }
+}
+```
+**注**：`#0.25` 是线条粗细。坐标是相对于音符的 `(X . Y)` 相对坐标，适合被大模型直接当作结构化参数生成。
