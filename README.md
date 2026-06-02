@@ -46,4 +46,5 @@ uv run python inference/generate.py --mode controlnet --layout-image layouts/sta
 
 ## Project Status
 
-Phase 0: Environment setup + minimal validation (in progress)
+Phase 0: Environment setup + minimal validation (Completed)
+Phase 1: Next phase of development (In Progress)
